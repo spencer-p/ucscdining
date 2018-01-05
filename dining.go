@@ -20,7 +20,6 @@ package ucscdining
 
 import (
 	"bytes"
-	_ "encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
