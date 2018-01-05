@@ -1,5 +1,5 @@
 /*
-Package ucsc-dining implements a wrapper to retrieve UCSC dining hall menus on
+Package ucscdining implements a wrapper to retrieve UCSC dining hall menus on
 the web.
 
 This library is reverse engineered from observing how UCSC's dining hall
@@ -44,8 +44,8 @@ const (
 // DiningHall represents a dining hall whose menu can be fetched.
 type DiningHall int
 
-// Request object to deliver to UCSC dining's website. This struct should not
-// necessarily be created manually. See DiningHall.On().
+// RequestPayload is an object to deliver to UCSC dining's website. This struct
+// should not necessarily be created manually. See DiningHall.On().
 type RequestPayload struct {
 	// Date must be in the format "MM/DD/YYYY"
 	Date string `json:"serve_date"`
