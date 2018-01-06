@@ -65,8 +65,8 @@ func (dh DiningHall) On(t time.Time) RequestPayload {
 			"locationNum":  []string{dh.ID},
 			"locationName": []string{dh.Name},
 			"dtdate":       []string{t.Format(dateFormat)},
-			// "myaction" should be "read", appears to not matter
-			"myaction": nil,
+			// Required to get breakfast formatted properly
+			"myaction": []string{"read"},
 			// sName is "UC Santa Cruz Dining" officially, but never checked
 			"sName": nil,
 			// naFlag is "1" officially, but also seems to not matter
