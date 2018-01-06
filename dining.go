@@ -2,9 +2,8 @@
 Package ucscdining implements a wrapper to retrieve UCSC dining hall menus on
 the web.
 
-This library is reverse engineered from observing how UCSC's dining hall
-websites interact with their backend. There are JavaScript examples at
-http://eat.ucsc.edu/scripts/.
+This library is reverse engineered from observing UCSC dining's nutrition site,
+available at http://nutrition.sa.ucsc.edu/.
 
 The menus are exposed fluently. To get the current menu at Porter:
 
@@ -15,46 +14,44 @@ Or to get the menu on some other date:
 	t := time.Parse("01/02/2006", "01/05/2018")
 	menu, err := CollegesNineTen.On(t).GetMenu()
 
+The library does not yet parse the result from UCSC.
 */
 package ucscdining
 
 import (
-	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 )
 
-const (
+var (
 	// ID numbers for colleges
-	CowellStevenson   DiningHall = 5
-	CrownMerrill      DiningHall = 20
-	PorterKresge      DiningHall = 25
-	CollegeEightOakes DiningHall = 30
-	CollegesNineTen   DiningHall = 40
+	CowellStevenson   = DiningHall{"5", "Cowell Stevenson Dining Hall"}
+	CrownMerrill      = DiningHall{"20", "Crown Merril Dining Hall"}
+	PorterKresge      = DiningHall{"25", "Porter Kresge Dining Hall"}
+	RachelCarsonOakes = DiningHall{"30", "Rachel Carson Oakes Dining Hall"}
+	CollegesNineTen   = DiningHall{"40", "Colleges Nine & Ten Dining Hall"}
+)
 
-	// See the javascript samples
-	apiurl = "http://eat.ucsc.edu/menu.php"
+const (
+	// See the links on http://nutrition.sa.ucsc.edu/
+	apiurl = "http://nutrition.sa.ucsc.edu/menuSamp.asp"
 
-	// Format for UCSC's api
+	// UCSC expects MM/DD/YYYY. Format string for time.Format.
 	dateFormat = "01/02/2006"
 )
 
 // DiningHall represents a dining hall whose menu can be fetched.
-type DiningHall int
+type DiningHall struct {
+	ID   string
+	Name string
+}
 
 // RequestPayload is an object to deliver to UCSC dining's website. This struct
 // should not necessarily be created manually. See DiningHall.On().
 type RequestPayload struct {
-	// Date must be in the format "MM/DD/YYYY"
-	Date string `json:"serve_date"`
-
-	// LocationID is from the idByLocation lookup table.
-	LocationID DiningHall `json:"location_num"`
-
-	// All UCSC dining halls should have true for this field.
-	UseDiningDB bool `json:"foodproDB"`
+	URLArgs url.Values
 }
 
 // On creates a request payload that encodes the given dining hall's menu
@@ -62,29 +59,28 @@ type RequestPayload struct {
 // immediately after creation.
 func (dh DiningHall) On(t time.Time) RequestPayload {
 	return RequestPayload{
-		Date:        t.Format(dateFormat),
-		LocationID:  dh,
-		UseDiningDB: true,
+		// See the links on http://nutrition.sa.ucsc.edu/ for how these variable
+		// names are found.
+		URLArgs: url.Values{
+			"locationNum":  []string{dh.ID},
+			"locationName": []string{dh.Name},
+			"dtdate":       []string{t.Format(dateFormat)},
+			// "myaction" should be "read", appears to not matter
+			"myaction": nil,
+			// sName is "UC Santa Cruz Dining" officially, but never checked
+			"sName": nil,
+			// naFlag is "1" officially, but also seems to not matter
+			"naFlag": nil,
+		},
 	}
 }
 
 // GetMenu for a request payload returns the menu described by the payload.
 // Use the On() method of DiningHall to get a payload.
+// Returns the contents of the web page as a byte array.
 func (r RequestPayload) GetMenu() ([]byte, error) {
-	// Create payload
-	// I would prefer JSON, but the server doesn't seem to like that.
-	payload := fmt.Sprintf("serve_date=\"%s\"&location_num=%d&foodproDB=%t",
-		r.Date,
-		r.LocationID,
-		r.UseDiningDB,
-	)
-
 	// Send request
-	resp, err := http.Post(
-		apiurl,
-		"application/x-www-form-urlencoded",
-		bytes.NewBufferString(payload),
-	)
+	resp, err := http.Get(apiurl + "?" + r.URLArgs.Encode())
 	if err != nil {
 		return nil, err
 	}
